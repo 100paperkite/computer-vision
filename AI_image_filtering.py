@@ -1,103 +1,10 @@
 import cv2
 import numpy as np
+import AI_function as func
 import math
 import time
 
 
-def image_padding(img, V, H):
-    if V == 0 and H == 0:
-        return img
-
-    # 1D-horizontal
-    if V == 0 and H != 0:
-        edge_left = np.zeros((img.shape[0], H))
-        edge_right = np.zeros((img.shape[0], H))
-        for y in range(img.shape[0]):
-            edge_left[y].fill(img[y][0])
-            edge_right[y].fill(img[y][-1])
-        return np.concatenate((np.concatenate((edge_left, img), axis=1), edge_right), axis=1)
-
-    # 1D-vertical
-    elif V != 0 and H == 0:
-        edge_up = img[0, :].copy()
-        edge_down = img[-1, :].copy()
-        for i in range(V - 1):
-            edge_up = np.vstack((edge_up, img[0, :].copy()))
-            edge_down = np.vstack((edge_down, img[-1, :].copy()))
-        return np.vstack((np.vstack((edge_up, img)), edge_down))
-    # 2D padding
-    else:
-        h_padded = image_padding(img, 0, H)
-        v_h_padded = image_padding(h_padded, V, 0)
-        return v_h_padded
-
-
-def cross_correlation_1d(img, kernel):
-    output = np.zeros(img.shape)
-    pad_size = int(kernel.shape[0] / 2)
-
-    # horizontal
-    if kernel.ndim == 1:
-        img = image_padding(img, 0, pad_size)
-        for y in range(output.shape[0]):
-            for x in range(output.shape[1]):
-                for dx in range(kernel.shape[0]):
-                    output[y, x] += kernel[dx] * img[y, x + dx]
-                output[y, x] /= 255.0
-    # vertical
-    else:
-        img = image_padding(img, pad_size, 0)
-        for y in range(output.shape[0]):
-            for x in range(output.shape[1]):
-                for dy in range(kernel.shape[0]):
-                    output[y, x] += kernel[dy][0] * img[y + dy, x]
-                output[y, x] /= 255.0
-
-    return output
-
-
-def cross_correlation_2d(img, kernel):
-    output = np.zeros(img.shape)
-    v_pad_size = int(kernel.shape[0] / 2)
-    h_pad_size = int(kernel.shape[1] / 2)
-
-    img = image_padding(img, v_pad_size, h_pad_size)
-
-    kernel_idx = [(i, j) for i in range(kernel.shape[0]) for j in range(kernel.shape[1])]
-    for y in range(output.shape[0]):
-        for x in range(output.shape[1]):
-            for (dy, dx) in kernel_idx:
-                output[y, x] += kernel[dy, dx] * img[y + dy, x + dx]
-            output[y, x] /= 255.0
-
-    return output
-
-
-def gaussian_function(x, sigma):
-    return (1 / pow(2 * math.pi, 1 / 2)) * pow(math.e, -(x * x) / (2 * sigma * sigma))
-
-
-def get_gaussian_filter_1d(size, sigma):
-    # mean = 0
-    len = int(size / 2)
-    output = np.array([gaussian_function(x, sigma) for x in range(-len, len + 1)])
-    # 가우시안의 합은 1
-    output = output * (1 / sum(output))
-
-    return output
-
-
-def get_gaussian_filter_2d(size, sigma):
-    # Gaussian은 separable
-    row_1d = get_gaussian_filter_1d(size, sigma)
-    col_1d = row_1d.reshape(size, 1)
-
-    # nx1 * 1xn = nxn 가우시안 필터
-    res = np.outer(col_1d, row_1d)
-    # print("* 합은 항상 1 :",sum(sum(res)))
-    # print(res)
-
-    return res
 
 
 def save_9_different_GF_images(image_path):
@@ -121,9 +28,9 @@ def save_9_different_GF_images(image_path):
             cnt += 1
             #
 
-            Gaussian_2D = get_gaussian_filter_2d(ksize, sigma)
+            Gaussian_2D = func.get_gaussian_filter_2d(ksize, sigma)
             # make filtered image
-            filtered_image = cross_correlation_2d(image.copy(), Gaussian_2D)
+            filtered_image = func.cross_correlation_2d(image.copy(), Gaussian_2D)
 
             # write filter info on the image
             text = '%dx%d s=%d' % (ksize, ksize, sigma)
@@ -151,7 +58,7 @@ def differece_between_1D_and_2D_GF(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     size = 5
-    h_GF = get_gaussian_filter_1d(size, 1)  # (1,5)
+    h_GF = func.get_gaussian_filter_1d(size, 1)  # (1,5)
     v_GF = h_GF.reshape(size, 1)  # (5,1)
 
     # ** checking for Cross-Correlation **
@@ -161,13 +68,13 @@ def differece_between_1D_and_2D_GF(image_path):
 
     # 1-Dimesion
     start = time.time()
-    image1 = cross_correlation_1d(255*cross_correlation_1d(image, h_GF),v_GF)
+    image1 = func.cross_correlation_1d(255*func.cross_correlation_1d(image, h_GF),v_GF)
     print("1D-time: ", time.time() - start)
     #cv2.imshow('image1',image1)
 
     # 2-Dimension
     start = time.time()
-    image2 = cross_correlation_2d(image, get_gaussian_filter_2d(size,1))
+    image2 = func.cross_correlation_2d(image, func.get_gaussian_filter_2d(size,1))
     print("2D-time: ", time.time() - start)
     #cv2.imshow('image2', image2)
 
