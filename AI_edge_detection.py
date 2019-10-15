@@ -8,8 +8,8 @@ import math
 
 
 # 2-2 Implement a function that returns the image gradient
-mag,dir = func.compute_image_gradient("lenna.png")
-func.non_maximum_suppression_dir(mag,dir)
+func.non_maximum_suppression_dir("lenna.png")
+func.non_maximum_suppression_dir("shapes.png")
 # func.compute_image_gradient("shapes.png")
 # cv2.waitKey()
 
