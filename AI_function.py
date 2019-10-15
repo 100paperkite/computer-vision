@@ -111,11 +111,11 @@ def sobel_filtering(image, axis):
         return cross_correlation_1d(255 * cross_correlation_1d(image, derivative_1D.reshape(3, 1)), blurring)
 
 
-def compute_image_gradient(imagepath):
+def compute_image_gradient(image_path):
     # time recording
     start = time.time()
 
-    image = cv2.imread(imagepath, cv2.IMREAD_GRAYSCALE)
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     # 2-1 Apply the Gaussian filtering to the input image
     image = cross_correlation_2d(image, get_gaussian_filter_2d(7, 1.5))
@@ -149,7 +149,10 @@ def compute_image_gradient(imagepath):
     return output[0], output[1]
 
 
-def non_maximum_suppression_dir(mag, dir):
+def non_maximum_suppression_dir(image_path):
+
+    # computing image gradient
+    mag, dir = compute_image_gradient(image_path)
 
     M, N = mag.shape
     # direction to array index pair
@@ -165,8 +168,13 @@ def non_maximum_suppression_dir(mag, dir):
             if (mag[i, j] <= mag[i+dy[q][0],j+dx[q][0]]) or (mag[i, j] <= mag[i+dy[q][1],j+dx[q][1]]):
                 output[i, j] = 0
 
-
+    # image verification
     cv2.imshow("image suppressed", output)
-    cv2.waitKey()
+
+    # saving image
+    cv2.imwrite("./result/edge_sup_" + image_path, 255 * output)
 
     return
+
+
+# Assignment 3
