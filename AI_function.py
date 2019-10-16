@@ -6,70 +6,70 @@ import time
 
 #### For Assignment 1 ####
 
-def image_padding(img, V, H):
-    if V == 0 and H == 0:
-        return img
+def image_padding(image, V, H):
+    img = image.copy()
 
-    # 1D-horizontal
-    if V == 0 and H != 0:
+    # horizontal
+    if H != 0:
         edge_left = np.zeros((img.shape[0], H))
         edge_right = np.zeros((img.shape[0], H))
         for y in range(img.shape[0]):
             edge_left[y].fill(img[y][0])
             edge_right[y].fill(img[y][-1])
-        return np.concatenate((np.concatenate((edge_left, img), axis=1), edge_right), axis=1)
+        img = np.concatenate((np.concatenate((edge_left, img), axis=1), edge_right), axis=1)
 
-    # 1D-vertical
-    elif V != 0 and H == 0:
+    # vertical
+    if V != 0:
         edge_up = img[0, :].copy()
         edge_down = img[-1, :].copy()
         for i in range(V - 1):
             edge_up = np.vstack((edge_up, img[0, :].copy()))
             edge_down = np.vstack((edge_down, img[-1, :].copy()))
-        return np.vstack((np.vstack((edge_up, img)), edge_down))
-    # 2D padding
-    else:
-        h_padded = image_padding(img, 0, H)
-        v_h_padded = image_padding(h_padded, V, 0)
-        return v_h_padded
+        img = np.vstack((np.vstack((edge_up, img)), edge_down))
+
+    return img
 
 
 def cross_correlation_1d(img, kernel):
+    start = time.time()
     output = np.zeros(img.shape)
     pad_size = int(kernel.shape[0] / 2)
 
+    r, c = output.shape
     # horizontal
     if kernel.ndim == 1:
         img = image_padding(img, 0, pad_size)
-        for y in range(output.shape[0]):
-            for x in range(output.shape[1]):
-                for dx in range(kernel.shape[0]):
-                    output[y, x] += kernel[dx] * img[y, x + dx]
-                output[y, x] /= 255.0
+        for y in range(r):
+            for x in range(c):
+                output[y, x] = (kernel * img[y, x: x + kernel.shape[0]]).sum()
     # vertical
     else:
         img = image_padding(img, pad_size, 0)
-        for y in range(output.shape[0]):
-            for x in range(output.shape[1]):
-                for dy in range(kernel.shape[0]):
-                    output[y, x] += kernel[dy][0] * img[y + dy, x]
-                output[y, x] /= 255.0
+        _kernel = np.squeeze(kernel)
+        for y in range(r):
+            for x in range(c):
+                output[y, x] = (_kernel * img[y: y + kernel.shape[0], x]).sum()
 
+    output /= 255.0
+    print('cross 1D-correlation time:', time.time() - start)
     return output
 
 
 def cross_correlation_2d(img, kernel):
+    start = time.time()
+
     output = np.zeros(img.shape)
-    v_pad_size = int(kernel.shape[0] / 2)
-    h_pad_size = int(kernel.shape[1] / 2)
+    v_pad_size, h_pad_size = int((kernel.shape[0])/2), int(kernel.shape[1]/2)
     img = image_padding(img, v_pad_size, h_pad_size)
 
-    kernel_idx = [(i, j) for i in range(kernel.shape[0]) for j in range(kernel.shape[1])]
-    for y in range(output.shape[0]):
-        for x in range(output.shape[1]):
-            for (dy, dx) in kernel_idx:
-                output[y, x] += kernel[dy, dx] * img[y + dy, x + dx]
-            output[y, x] /= 255.0
+    r,c  = output.shape
+    for y in range(r):
+        for x in range(c):
+            output[y,x] = (kernel * img[y:y+kernel.shape[0],x:x+kernel.shape[1]]).sum()
+
+    output /= 255.0
+
+    print('cross 2D-correlation time:', time.time() - start)
     return output
 
 
@@ -135,7 +135,7 @@ def compute_image_gradient(image_path):
 
             # 1사분면을 양수로.
             dir = math.atan2(-df_dy, df_dx) * (180 / math.pi)
-            dir = 180+dir if dir<0 else dir
+            dir = 180 + dir if dir < 0 else dir
 
             # magnitude 계
             mag = math.pow((df_dx * df_dx) + (df_dy * df_dy), 1 / 2)
@@ -150,7 +150,6 @@ def compute_image_gradient(image_path):
 
 
 def non_maximum_suppression_dir(image_path):
-
     # computing image gradient
     mag, dir = compute_image_gradient(image_path)
 
@@ -163,9 +162,9 @@ def non_maximum_suppression_dir(image_path):
     for i in range(1, M - 1):
         for j in range(1, N - 1):
             # quantize
-            q = int((22.5+dir[i, j]) / 45)%4  # 0 ~ 3 values
+            q = int((22.5 + dir[i, j]) / 45) % 4  # 0 ~ 3 values
             # suppression
-            if (mag[i, j] <= mag[i+dy[q][0],j+dx[q][0]]) or (mag[i, j] <= mag[i+dy[q][1],j+dx[q][1]]):
+            if (mag[i, j] <= mag[i + dy[q][0], j + dx[q][0]]) or (mag[i, j] <= mag[i + dy[q][1], j + dx[q][1]]):
                 output[i, j] = 0
 
     # image verification
@@ -176,5 +175,3 @@ def non_maximum_suppression_dir(image_path):
 
     return
 
-
-# Assignment 3
