@@ -58,8 +58,8 @@ def non_maximum_suppression_dir(mag,dir):
 
 # Part 2 script
 
-image_path = ['lenna.png', 'shapes.png']
-for path in image_path:
+image_paths = ['lenna.png', 'shapes.png']
+for path in image_paths:
     # read image
     image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
@@ -70,13 +70,13 @@ for path in image_path:
     mag, dir = compute_image_gradient(image)
 
     cv2.imshow('image gradient', mag)
-    cv2.imwrite("./result/part2_edge_raw_" + str(image_path), 255 * mag)
+    cv2.imwrite("./result/part2_edge_raw_" + path, 255 * mag)
 
     # 2-3 Implement a function that performs Non-maximum Suppression (NMS)
     supressed_mag = non_maximum_suppression_dir(mag,dir)
 
     cv2.imshow("image suppressed", supressed_mag)
-    cv2.imwrite("./result/part2_edge_sup_" + str(image_path), 255 * supressed_mag)
+    cv2.imwrite("./result/part2_edge_sup_" + path, 255 * supressed_mag)
 
     cv2.waitKey()
     cv2.destroyAllWindows()

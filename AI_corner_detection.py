@@ -82,8 +82,8 @@ def draw_circle_at_point(img,suppressed_R):
 
 # Part 3 script
 
-image_path = ['lenna.png', 'shapes.png']
-for path in image_path:
+image_paths = ['lenna.png', 'shapes.png']
+for path in image_paths:
     # read image
     gray_image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
@@ -95,20 +95,20 @@ for path in image_path:
 
     # corner raw image
     cv2.imshow('corner detection', R)
-    cv2.imwrite('./result/part_3_corner_raw_' + str(image_path), 255 * R)
+    cv2.imwrite('./result/part_3_corner_raw_' + path, 255 * R)
 
     # corner bin image
     bin_img = corner_bin(gray_image, R)
 
     cv2.imshow('corner bin', bin_img)
-    cv2.imwrite('./result/part_3_corner_bin_' + str(image_path), bin_img)
+    cv2.imwrite('./result/part_3_corner_bin_' + path, bin_img)
 
     # 3-3 Thresholding and Non-maximum Suppression (NMS)
     suppressed_R = non_maximum_suppression_win(R,11)
     circled_R = draw_circle_at_point(gray_image,suppressed_R)
 
     cv2.imshow('corner suppression ', circled_R)
-    cv2.imwrite('./result/part_3_corner_sup_' + str(image_path), circled_R)
+    cv2.imwrite('./result/part_3_corner_sup_' + path, circled_R)
 
     cv2.waitKey()
     cv2.destroyAllWindows()

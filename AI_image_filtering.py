@@ -65,7 +65,7 @@ def differece_between_1D_and_2D_GF(image_path):
 
 # Part 1 script
 
-image_path = ['lenna.png', 'shapes.png']
+
 kernel_1D = np.array([0,1,0])
 kernel_2D = np.array([[0,0,0],
                       [0,1,0],
@@ -78,7 +78,8 @@ print(func.get_gaussian_filter_1d(5,1))
 print('Gaussian Filter 2D')
 print(func.get_gaussian_filter_2d(5,1))
 
-for path in image_path:
+image_paths = ['lenna.png', 'shapes.png']
+for path in image_paths:
     # 1-1 : Image Filtering by Cross-Correlation
     img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
     filtered_img = func.cross_correlation_1d(img, kernel_1D)  # 1D corr
@@ -90,7 +91,7 @@ for path in image_path:
     _9_images = nine_different_GF_images(path)
 
     cv2.imshow("9 images", _9_images)
-    cv2.imwrite("./result/part_1_gaussian_filtered_" + str(image_path), 255 * _9_images)
+    cv2.imwrite("./result/part_1_gaussian_filtered_" + path, 255 * _9_images)
 
     # differece between 1D and 2D Gaussian Filtering
     diff_map = differece_between_1D_and_2D_GF(path)
