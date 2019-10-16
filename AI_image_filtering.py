@@ -5,7 +5,7 @@ import math
 import time
 
 
-def save_9_different_GF_images(image_path):
+def nine_different_GF_images(image_path):
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
     kernel_size = [5, 7, 13]
@@ -39,10 +39,7 @@ def save_9_different_GF_images(image_path):
         else:
             res_image = np.concatenate((res_image, tmp_images), axis=0)
 
-    # image verification
-    cv2.imshow("9 images", res_image)
-    # saving image
-    cv2.imwrite("./result/part_1_gaussian_filtered_" + image_path, 255 * res_image)
+    return res_image
 
 
 def differece_between_1D_and_2D_GF(image_path):
@@ -62,10 +59,9 @@ def differece_between_1D_and_2D_GF(image_path):
     print("gaussian 2D-filtering time: ", time.time() - start)
 
     diff = abs(image1) - abs(image2)
-    cv2.imshow('difference map',diff)
-
     print("intensity sum: ", diff.sum())
 
+    return diff
 
 # Part 1 script
 
@@ -74,7 +70,6 @@ kernel_1D = np.array([0,1,0])
 kernel_2D = np.array([[0,0,0],
                       [0,1,0],
                       [0,0,0]])
-# console
 
 # 1-2 : The Gaussian Filter
 
@@ -91,8 +86,16 @@ for path in image_path:
 
     # 1-2 : The Gaussian Filter
 
-    save_9_different_GF_images(path)
-    differece_between_1D_and_2D_GF(path)
+    # save 9 images which are filtered by gaussian filters
+    _9_images = nine_different_GF_images(path)
+
+    cv2.imshow("9 images", _9_images)
+    cv2.imwrite("./result/part_1_gaussian_filtered_" + str(image_path), 255 * _9_images)
+
+    # differece between 1D and 2D Gaussian Filtering
+    diff_map = differece_between_1D_and_2D_GF(path)
+
+    cv2.imshow('difference map', diff_map)
 
     cv2.waitKey()
     cv2.destroyAllWindows()

@@ -3,12 +3,8 @@ import cv2
 import numpy as np
 import time
 
-def compute_corner_response(image_path):
+def compute_corner_response(image):
     start = time.time()
-    # image read
-    gray_image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    # Gaussian filtering
-    image = func.cross_correlation_2d(gray_image, func.get_gaussian_filter_2d(7, 1.5))
 
     Ix = func.sobel_filtering(image,axis=0)
     Iy = func.sobel_filtering(image,axis=1)
@@ -39,20 +35,6 @@ def compute_corner_response(image_path):
     response = response / response.max()
 
     print("Computing time of corner response",time.time()-start)
-
-
-    # corner raw image
-    cv2.imshow('corner detection', response)
-    cv2.imwrite('./result/part_3_corner_raw_'+image_path,255*response)
-
-    # corner bin image
-    bin_img = corner_bin(gray_image,response)
-
-    cv2.imshow('corner bin', bin_img)
-    cv2.imwrite('./result/part_3_corner_bin_'+image_path,bin_img)
-
-    cv2.waitKey()
-
     return response
 
 
@@ -67,6 +49,7 @@ def corner_bin(image, response_img):
 
 def non_maximum_suppression_win(R,winSize):
     start = time.time()
+
     output = R.copy()
     # suppress if < threshold
     output[np.where(output<0.1)] = 0
@@ -96,12 +79,38 @@ def draw_circle_at_point(img,suppressed_R):
 
 
 
-R = compute_corner_response('lenna.png')
 
-suppressed_R = non_maximum_suppression_win(R,11)
-gray_image = cv2.imread('lenna.png', cv2.IMREAD_GRAYSCALE)
-cv2.imshow('R',R)
-cv2.imshow('NMS R',suppressed_R)
-cv2.imshow('circled R',draw_circle_at_point(gray_image,suppressed_R))
-cv2.waitKey()
+# Part 3 script
+
+image_path = ['lenna.png', 'shapes.png']
+for path in image_path:
+    # read image
+    gray_image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+
+    # 3-1 Apply the Gaussian filtering to the input image
+    image = func.cross_correlation_2d(gray_image, func.get_gaussian_filter_2d(7, 1.5))
+
+    # 3-2 Implement a function that returns corner response values
+    R = compute_corner_response(image)
+
+    # corner raw image
+    cv2.imshow('corner detection', R)
+    cv2.imwrite('./result/part_3_corner_raw_' + str(image_path), 255 * R)
+
+    # corner bin image
+    bin_img = corner_bin(gray_image, R)
+
+    cv2.imshow('corner bin', bin_img)
+    cv2.imwrite('./result/part_3_corner_bin_' + str(image_path), bin_img)
+
+    # 3-3 Thresholding and Non-maximum Suppression (NMS)
+    suppressed_R = non_maximum_suppression_win(R,11)
+    circled_R = draw_circle_at_point(gray_image,suppressed_R)
+
+    cv2.imshow('corner suppression ', circled_R)
+    cv2.imwrite('./result/part_3_corner_sup_' + str(image_path), circled_R)
+
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
 
