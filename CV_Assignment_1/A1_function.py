@@ -31,7 +31,6 @@ def image_padding(image, V, H):
 
 
 def cross_correlation_1d(img, kernel):
-    start = time.time()
     output = np.zeros(img.shape)
     pad_size = int(kernel.shape[0] / 2)
 
@@ -51,30 +50,27 @@ def cross_correlation_1d(img, kernel):
                 output[y, x] = (_kernel * img[y: y + kernel.shape[0], x]).sum()
 
     output /= 255.0
-    print('cross 1D-correlation time:', time.time() - start)
     return output
 
 
 def cross_correlation_2d(img, kernel):
-    start = time.time()
-
     output = np.zeros(img.shape)
     v_pad_size, h_pad_size = int((kernel.shape[0])/2), int(kernel.shape[1]/2)
     img = image_padding(img, v_pad_size, h_pad_size)
 
     r,c  = output.shape
+
     for y in range(r):
         for x in range(c):
             output[y,x] = (kernel * img[y:y+kernel.shape[0],x:x+kernel.shape[1]]).sum()
 
     output /= 255.0
 
-    print('cross 2D-correlation time:', time.time() - start)
     return output
 
 
 def gaussian_function(x, sigma):
-    return (1 / pow(2 * math.pi, 1 / 2)) * pow(math.e, -(x * x) / (2 * sigma * sigma))
+    return (1 / (sigma*math.sqrt(2 * math.pi))) * pow(math.e, -(x * x) / (2 * sigma * sigma))
 
 
 def get_gaussian_filter_1d(size, sigma):
@@ -82,8 +78,7 @@ def get_gaussian_filter_1d(size, sigma):
     length = int(size / 2)
     output = np.array([gaussian_function(x, sigma) for x in range(-length, length + 1)])
     # 가우시안의 합은 1
-    output = output * (1 / sum(output))
-
+    output /= sum(output)
     return output
 
 
@@ -93,11 +88,10 @@ def get_gaussian_filter_2d(size, sigma):
     col_1d = row_1d.reshape(size, 1)
 
     # nx1 * 1xn = nxn 가우시안 필터
-    res = np.outer(col_1d, row_1d)
-    # print("* 합은 항상 1 :",sum(sum(res)))
-    # print(res)
+    output = np.outer(col_1d, row_1d)
+    output/= output.sum()
 
-    return res
+    return output
 
 
 #### For Assignment 2 ####
@@ -106,9 +100,9 @@ def sobel_filtering(image, axis):
     blurring = np.array([1, 2, 1])
     derivative_1D = np.array([-1, 0, 1])
     if (axis == 0):
-        return cross_correlation_1d(255 * cross_correlation_1d(image, blurring.reshape(3, 1)), derivative_1D)
+        return cross_correlation_2d(image, np.outer(blurring.reshape(3, 1),derivative_1D))
     else:
-        return cross_correlation_1d(255 * cross_correlation_1d(image, derivative_1D.reshape(3, 1)), blurring)
+        return cross_correlation_2d(image, np.outer(derivative_1D.reshape(3, 1), blurring))
 
 
 

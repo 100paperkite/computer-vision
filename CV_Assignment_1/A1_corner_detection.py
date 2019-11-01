@@ -1,4 +1,4 @@
-import AI_function as func
+import A1_function as func
 import cv2
 import numpy as np
 import time
@@ -32,9 +32,10 @@ def compute_corner_response(image):
             # because window size is 5
             response[i+2,j+2] = Res
 
+    # normalization
     response = response / response.max()
 
-    print("Computing time of corner response",time.time()-start)
+    print("computing corner response Time",time.time()-start)
     return response
 
 
@@ -63,7 +64,7 @@ def non_maximum_suppression_win(R,winSize):
             if window.max()!=output[i+d,j+d]:
                 output[i+d,j+d] = 0
 
-    print("Computing time of NMS response",time.time()-start)
+    print("computing non maximum suppression win Time",time.time()-start)
 
     return output
 
@@ -84,6 +85,7 @@ def draw_circle_at_point(img,suppressed_R):
 
 image_paths = ['lenna.png', 'shapes.png']
 for path in image_paths:
+    print('\n*************', path, '*************')
     # read image
     gray_image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
@@ -112,5 +114,6 @@ for path in image_paths:
 
     cv2.waitKey()
     cv2.destroyAllWindows()
+
 
 

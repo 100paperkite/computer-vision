@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import AI_function as func
+import A1_function as func
 import math
 import time
 
@@ -39,19 +39,25 @@ def compute_image_gradient(image):
 
 
 def non_maximum_suppression_dir(mag,dir):
+    start = time.time()
     M, N = mag.shape
     # direction to array index pair
     dy = [[0, 0], [-1, 1], [-1, 1], [-1, 1]]
     dx = [[1, -1], [1, -1], [0, 0], [-1, 1]]
     output = mag.copy()
 
+    # quantize
+    quant = (dir + 22.5) / 45
+    quant = quant.astype('uint8') % 4
+
     for i in range(1, M - 1):
         for j in range(1, N - 1):
-            # quantize
-            q = int((22.5 + dir[i, j]) / 45) % 4  # 0 ~ 3 values
             # suppression
-            if (mag[i, j] <= mag[i + dy[q][0], j + dx[q][0]]) or (mag[i, j] <= mag[i + dy[q][1], j + dx[q][1]]):
+            q = quant[i,j]
+            if (mag[i, j] < mag[i + dy[q][0], j + dx[q][0]]) or (mag[i, j] < mag[i + dy[q][1], j + dx[q][1]]):
                 output[i, j] = 0
+
+    print("computing non maximum suppression Time: ", time.time() - start)
 
     return output
 
@@ -60,6 +66,7 @@ def non_maximum_suppression_dir(mag,dir):
 
 image_paths = ['lenna.png', 'shapes.png']
 for path in image_paths:
+    print('\n*************', path, '*************')
     # read image
     image = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
 
@@ -70,15 +77,14 @@ for path in image_paths:
     mag, dir = compute_image_gradient(image)
 
     cv2.imshow('image gradient', mag)
-    cv2.imwrite("./result/part2_edge_raw_" + path, 255 * mag)
+    cv2.imwrite("./result/part_2_edge_raw_" + path, 255 * mag)
 
     # 2-3 Implement a function that performs Non-maximum Suppression (NMS)
     supressed_mag = non_maximum_suppression_dir(mag,dir)
 
     cv2.imshow("image suppressed", supressed_mag)
-    cv2.imwrite("./result/part2_edge_sup_" + path, 255 * supressed_mag)
+    cv2.imwrite("./result/part_2_edge_sup_" + path, 255 * supressed_mag)
 
     cv2.waitKey()
     cv2.destroyAllWindows()
-
 
