@@ -2,11 +2,10 @@ import numpy as np
 import cv2
 import time
 
-CONST_R = 1 << np.arange(8)
-
+CONST_R = (1 << np.arange(8))[:,None]
+# 2-1
 def sum_hamming_distance(v1, v2):
-    res = [(np.count_nonzero(np.bitwise_xor(i1, i2) & CONST_R)) for i1,i2 in zip(v1,v2)]
-    return sum(res)
+    return np.count_nonzero((v1 & CONST_R) != (v2 & CONST_R))
 
 
 def BF_match(des1, des2):
@@ -21,6 +20,13 @@ def BF_match(des1, des2):
 
     return matches
 
+# 2-2
+def compute_homography(srcP,desP):
+    return
+
+
+
+# main script
 
 # Read Images
 desk = cv2.imread('cv_desk.png', cv2.IMREAD_GRAYSCALE)
