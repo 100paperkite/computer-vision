@@ -120,7 +120,7 @@ def compute_homography(srcP, destP):
 
 
 def compute_homography_ransac(srcP, destP, th):
-    iteration = 2500
+    iteration = 3000
     max_matched = 0
 
     inliers = []
@@ -164,16 +164,14 @@ matches = BF_match(des1, des2)
 matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
 feature_matched = cv2.drawMatches(desk, kp1, cover, kp2, toDMatchList(matches[:20]), None, flags=2)
 
-# cv2.imshow('feature matching',feature_matched)
-# cv2.waitKey(0)
+cv2.imshow('feature matching',feature_matched)
+cv2.waitKey(0)
 
 
 # 2-2 Computing homography with normalization
 deskP, coverP = get_points(matches,kp1,kp2,18)
 
 T = compute_homography(coverP, deskP)
-R,mask = cv2.findHomography(coverP,deskP,cv2.RANSAC)
-
 transformed_img = cv2.warpPerspective(cover,T, (desk.shape[1],desk.shape[0]))
 
 cv2.imshow('homography with normalization', wrap_image(desk,transformed_img))
@@ -181,10 +179,31 @@ cv2.waitKey(0)
 
 # Computing homography with RANSAC
 deskP, coverP = get_points(matches,kp1,kp2,150)
-ransac = compute_homography_ransac(coverP,deskP,2.5)
 
-result = desk.copy()
+ransac = compute_homography_ransac(coverP,deskP,2)
+
 ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1],desk.shape[0]))
 
 cv2.imshow('ransac', wrap_image(desk,ransac_img))
+cv2.waitKey(0)
+
+# 2-5 harry potter
+
+hp_cover = cv2.imread('hp_cover.jpg', cv2.IMREAD_GRAYSCALE)
+# scaling
+rate = [cover.shape[i]/hp_cover.shape[i] for i in range(2)]
+HP = np.full(cover.shape,0,dtype=np.float)
+
+# magnifying
+S = np.array([[rate[1],0,0],[0,rate[0],0],[0,0,1]])
+D = np.arange(0,1.0,0.05)
+for i in range(hp_cover.shape[0]):
+    for j in range(hp_cover.shape[1]):
+        for d in D:
+            _x, _y, _ = np.dot(S, np.array([[j+d], [i+d], [1]]))
+            HP[int(_y),int(_x)] = hp_cover[i,j]
+
+
+hp_img = cv2.warpPerspective(HP, ransac, (desk.shape[1],desk.shape[0]))
+cv2.imshow('harry potter wrapping', wrap_image(desk,hp_img))
 cv2.waitKey(0)
