@@ -4,10 +4,29 @@ import time
 
 CONST_R = (1 << np.arange(8))[:, None]
 
+#
+def wrap_image(base,addimg):
+    result = base.copy()
+    for i in range(base.shape[0]):
+        for j in range(base.shape[1]):
+            if addimg[i, j] != 0:
+                result[i, j] = addimg[i, j]
+    return result
+#
+def get_points(matches,kp1,kp2,num):
+    matches = np.array(matches[:num])  # num 개수만큼 뽑기
+    kp1 = np.array(kp1)
+    kp2 = np.array(kp2)
+
+    idx1 = matches[:, 0]
+    idx2 = matches[:, 1]
+
+    p1 = np.array([np.array(kp.pt) for kp in kp1[idx1]])
+    p2 = np.array([np.array(kp.pt) for kp in kp2[idx2]])
+
+    return p1,p2
 
 # 2-1
-
-
 def hamming_distance(v1, v2):
     return np.count_nonzero((v1 & CONST_R) != (v2 & CONST_R))
 
@@ -45,7 +64,11 @@ def transform_coord(M, pts):
     result = np.array([np.dot(M, coord.reshape(3, 1)) for coord in pts])
     result = result.reshape(size, 3)
 
-    return np.array([coord / coord[2] for coord in result])[:, :2]
+    for coord in result:
+        if coord[2]!=0:
+            coord/=coord[2]
+
+    return result[:, :2]
 
 
 def get_normalize_matrix(P):
@@ -65,10 +88,10 @@ def get_normalize_matrix(P):
 
 def find_matrix_A(srcP, destP):
     size = srcP.shape[0]
-    # [x,y,_x,_y] form으
+    # [x,y,_x,_y] form
     points = np.hstack((srcP, destP))
-    A = np.array([[[-x, -y, -1, 0, 0, 0, x * _x, y * _x, _x],
-                   [0, 0, 0, -x, -y, -1, x * _y, y * _y, _y]] for x, y, _x, _y in points])
+    A = np.array([[[x, y, 1, 0, 0, 0, -x * _x, -y * _x, -_x],
+                   [0, 0, 0, x, y, 1, -x * _y, -y * _y, -_y]] for x, y, _x, _y in points])
 
     return np.reshape(A, (size * 2, 9))
 
@@ -97,28 +120,29 @@ def compute_homography(srcP, destP):
 
 
 def compute_homography_ransac(srcP, destP, th):
-    iteration = 10
+    iteration = 2500
     max_matched = 0
-    H = []
-    for i in range(iteration):
+
+    inliers = []
+    for iters in range(iteration):
         rand4Idx = np.random.choice(len(srcP), 4, replace=False, p=None)
+
         # sampled 4 entries
-        sample_srcP, sample_destP = srcP[tuple([rand4Idx])], destP[tuple([rand4Idx])]
+        sample_srcP, sample_destP = srcP[rand4Idx], destP[rand4Idx]
 
         _H = compute_homography(sample_srcP, sample_destP)
+        test_destP = transform_coord(_H,srcP)
 
-        test_dest = transform_coord(_H, srcP)
-        test_dest = np.array([test / test[2] for test in test_dest])[:, :2]
-        destP = destP.astype(np.int)
-        test_dest = test_dest.astype(np.int)
-        print(destP[0], test_dest[0])
-        dist = np.array([hamming_distance(destP[i], test_dest[i]) for i in range(len(destP))])
-        inliers = np.count_nonzero(dist <= th)
-        print(inliers)
-        if inliers > max_matched:
-            H = _H
+        _inliers = []
+        for i in range(len(test_destP)):
+            if abs(test_destP[i][0]-destP[i][0])<=th and abs(test_destP[i][1]-destP[i][1])<=th:
+                _inliers.append(i)
 
-    return H
+        if len(_inliers) > max_matched:
+            inliers=_inliers
+            max_matched = len(_inliers)
+
+    return compute_homography(srcP[inliers],destP[inliers])
 
 
 # main script
@@ -129,33 +153,38 @@ cover = cv2.imread('cv_cover.jpg', cv2.IMREAD_GRAYSCALE)
 
 # kp - 2차원 좌표,  des = descriptor
 orb = cv2.ORB_create()
-
 kp1 = orb.detect(desk, None)
 kp1, des1 = orb.compute(desk, kp1)
 kp2 = orb.detect(cover, None)
 kp2, des2 = orb.compute(cover, kp2)
 
-# start = time.time()
+# 2-1 Feature detection, description, and matching
+
 matches = BF_match(des1, des2)
 matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
-feature_matched = cv2.drawMatches(desk, kp1, cover, kp2, toDMatchList(matches[:10]), None, flags=2)
-# print(time.time()-start)
+feature_matched = cv2.drawMatches(desk, kp1, cover, kp2, toDMatchList(matches[:20]), None, flags=2)
+
 # cv2.imshow('feature matching',feature_matched)
 # cv2.waitKey(0)
 
 
-matches = np.array(matches[:18])
-kp1 = np.array(kp1)
-kp2 = np.array(kp2)
+# 2-2 Computing homography with normalization
+deskP, coverP = get_points(matches,kp1,kp2,18)
 
-deskIdx = matches[:, 0]
-coverIdx = matches[:, 1]
-
-deskP = np.array([np.array(kp.pt) for kp in kp1[deskIdx]])
-coverP = np.array([np.array(kp.pt) for kp in kp2[coverIdx]])
-
-# 2-4
 T = compute_homography(coverP, deskP)
-res_img = cv2.warpPerspective(cover, T, (1000, 700))
-cv2.imshow('res', res_img)
+R,mask = cv2.findHomography(coverP,deskP,cv2.RANSAC)
+
+transformed_img = cv2.warpPerspective(cover,T, (desk.shape[1],desk.shape[0]))
+
+cv2.imshow('homography with normalization', wrap_image(desk,transformed_img))
+cv2.waitKey(0)
+
+# Computing homography with RANSAC
+deskP, coverP = get_points(matches,kp1,kp2,150)
+ransac = compute_homography_ransac(coverP,deskP,2.5)
+
+result = desk.copy()
+ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1],desk.shape[0]))
+
+cv2.imshow('ransac', wrap_image(desk,ransac_img))
 cv2.waitKey(0)
