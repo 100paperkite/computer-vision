@@ -46,15 +46,24 @@ def draw_axis(image):
 
 
 def get_transformed_image(img, M):
+    # 이미지의 중심 찾기
     yhalf, xhalf = int(img.shape[0] / 2), int(img.shape[1] / 2)
 
+    # 그림에서 실제 값이 있는 좌표의 인덱스 알아내기
     imgIndex = np.where(img < 255)
     yidxes, xidxes = -imgIndex[0]+yhalf, imgIndex[1]-xhalf
 
-    result_img = np.full((801, 801), 255, dtype=float)
+
+    result_img = np.full((801, 801), 255, dtype=float) # 배경이미지 생성
+
+    # 실제 값의 좌표들을 행렬 M을 이용하여 transform 시키기.
     for i in range(len(yidxes)):
-        _x, _y, _ = np.dot(M, np.array([[xidxes[i]], [yidxes[i]], [1]]))
-        result_img[-int(_y)+400,int(_x)+400] = img[-yidxes[i]+yhalf, xidxes[i]+xhalf]
+        # 확대 시 이미지 깨짐 방지 - pixel 0.1단위로 세분화
+        for d in np.arange(0,1,0.15):
+            # 바뀐 좌표 _x, _y
+            _x, _y, _ = np.dot(M, np.array([[xidxes[i]+d], [yidxes[i]+d], [1]]))
+            # 배경이미지의 중심이 이미지의 중심으로 맞추고, 실제로 매핑시키기.
+            result_img[-int(_y)+400,int(_x)+400] = img[-yidxes[i]+yhalf, xidxes[i]+xhalf]
 
     draw_axis(result_img)
     return result_img
