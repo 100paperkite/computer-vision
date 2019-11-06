@@ -120,7 +120,8 @@ def compute_homography(srcP, destP):
 
 
 def compute_homography_ransac(srcP, destP, th):
-    iteration = 3000
+    n = len(srcP)
+    iteration = 4500
     max_matched = 0
 
     inliers = []
@@ -144,6 +145,16 @@ def compute_homography_ransac(srcP, destP, th):
 
     return compute_homography(srcP[inliers],destP[inliers])
 
+def image_blending(base,addimg,edge,length):
+    wrapImg = wrap_image(addimg,base)
+    xstart, xend = edge-length, edge
+
+    # xstart ~ xend 열로 갈수록 addimg 반영 비율 낮아짐
+    for x in range(xstart,xend):
+        # x+=length
+        p = (x-xstart)/(xend-xstart)
+        wrapImg[:,x] = (wrapImg[:,x]*(1-p)+addimg[:,x]*p)
+    return wrapImg/255
 
 # main script
 
@@ -178,7 +189,7 @@ cv2.imshow('homography with normalization', wrap_image(desk,transformed_img))
 cv2.waitKey(0)
 
 # Computing homography with RANSAC
-deskP, coverP = get_points(matches,kp1,kp2,150)
+deskP, coverP = get_points(matches,kp1,kp2,140)
 
 ransac = compute_homography_ransac(coverP,deskP,2)
 
@@ -187,7 +198,7 @@ ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1],desk.shape[0]))
 cv2.imshow('ransac', wrap_image(desk,ransac_img))
 cv2.waitKey(0)
 
-# 2-5 harry potter
+# 2-4 (c) harry potter
 
 hp_cover = cv2.imread('hp_cover.jpg', cv2.IMREAD_GRAYSCALE)
 # scaling
@@ -207,3 +218,36 @@ for i in range(hp_cover.shape[0]):
 hp_img = cv2.warpPerspective(HP, ransac, (desk.shape[1],desk.shape[0]))
 cv2.imshow('harry potter wrapping', wrap_image(desk,hp_img))
 cv2.waitKey(0)
+
+
+# 2-5 Image stitching
+
+left = cv2.imread('diamondhead-10.png',cv2.IMREAD_GRAYSCALE)
+right = cv2.imread('diamondhead-11.png',cv2.IMREAD_GRAYSCALE)
+ly,lx = left.shape
+ry,rx = right.shape
+
+# kp - 2차원 좌표,  des = descriptor
+orb = cv2.ORB_create()
+kp1 = orb.detect(left, None)
+kp1, des1 = orb.compute(left, kp1)
+kp2 = orb.detect(right, None)
+kp2, des2 = orb.compute(right, kp2)
+
+# 2-1 Feature detection, description, and matching
+
+matches = BF_match(des1, des2)
+matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
+
+leftP, rightP  = get_points(matches,kp1,kp2,18)
+ransac = compute_homography_ransac(rightP,leftP,0.8)
+distance = int(leftP[0,0]-rightP[0,0])
+ransac_img = cv2.warpPerspective(right, ransac, (lx+distance,ly))
+
+left = np.hstack([left,np.zeros((ly,distance))])
+result = image_blending(left,ransac_img,lx,200)
+cv2.imshow('Image Stitching',result)
+cv2.waitKey(0)
+
+
+
