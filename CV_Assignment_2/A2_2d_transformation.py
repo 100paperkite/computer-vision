@@ -51,21 +51,26 @@ def get_transformed_image(img, M):
 
     # 그림에서 실제 값이 있는 좌표의 인덱스 알아내기
     imgIndex = np.where(img < 255)
-    yidxes, xidxes = -imgIndex[0]+yhalf, imgIndex[1]-xhalf
+    Y, X = -imgIndex[0]+yhalf, imgIndex[1]-xhalf
 
 
     result_img = np.full((801, 801), 255, dtype=float) # 배경이미지 생성
 
+    # 픽셀값 세분화
+    D = np.arange(-0.5,0.5,0.04)
+
+    #start = time.time()
     # 실제 값의 좌표들을 행렬 M을 이용하여 transform 시키기.
-    for i in range(len(yidxes)):
-        # 확대 시 이미지 깨짐 방지 - pixel 0.1단위로 세분화
-        for d in np.arange(0,1,0.15):
+    for i in range(len(Y)):
+        for d in D:
             # 바뀐 좌표 _x, _y
-            _x, _y, _ = np.dot(M, np.array([[xidxes[i]+d], [yidxes[i]+d], [1]]))
+            _x, _y, _ = np.dot(M, np.array([[X[i]+d], [Y[i]+d], [1]]))
             # 배경이미지의 중심이 이미지의 중심으로 맞추고, 실제로 매핑시키기.
-            result_img[-int(_y)+400,int(_x)+400] = img[-yidxes[i]+yhalf, xidxes[i]+xhalf]
+            result_img[-int(_y)+400,int(_x)+400] = img[-Y[i]+yhalf, X[i]+xhalf]
 
     draw_axis(result_img)
+    #print(time.time() - start)
+
     return result_img
 
 
@@ -77,9 +82,13 @@ I = np.array([[1, 0, 0],
               [0, 0, 1]])
 M = I
 
+shift = False
 while True:
     cv2.imshow('result', get_transformed_image(img, M))
-    keyboard = cv2.waitKeyEx(0)
+    keyboard = cv2.waitKey()
+    if(keyboard==0):
+        shift = True
+        continue
 
     if keyboard == ord('a'):
         M = np.dot(transition_matrix((0, -1), 5), M)
@@ -89,28 +98,27 @@ while True:
         M = np.dot(transition_matrix((1, 0), 5), M)
     elif keyboard == ord('s'):
         M = np.dot(transition_matrix((-1, 0), 5), M)
+    elif keyboard == ord('r') and shift:
+        M = np.dot(rotation_matrix(-5), M)
     elif keyboard == ord('r'):
         M = np.dot(rotation_matrix(5), M)
-    elif keyboard == ord('q'):
-        M = np.dot(rotation_matrix(-5), M)
+    elif keyboard == ord('f') and shift:
+        M = np.dot(filp_matrix(0), M)
     elif keyboard == ord('f'):
         M = np.dot(filp_matrix(1), M)
-    elif keyboard == ord('g'):
-        M = np.dot(filp_matrix(0), M)
+    elif keyboard == ord('x') and shift:
+        M = np.dot(scaling_matrix(0, 5), M)
     elif keyboard == ord('x'):
         M = np.dot(scaling_matrix(0, -5), M)
-    elif keyboard == ord('z'):
-        M = np.dot(scaling_matrix(0, 5), M)
+    elif keyboard == ord('y') and shift:
+        M = np.dot(scaling_matrix(1, 5), M)
     elif keyboard == ord('y'):
         M = np.dot(scaling_matrix(1, -5), M)
-    elif keyboard == ord('t'):
-        M = np.dot(scaling_matrix(1, 5), M)
-    elif keyboard == ord('m'):
+    elif keyboard == ord('h') and shift:
         M = I
-    elif keyboard == ord('p'):
+    elif keyboard == ord('q') and shift:
         break
+    shift = False
 
 cv2.destroyAllWindows()
 
-# while True:
-#    keyboard = input()

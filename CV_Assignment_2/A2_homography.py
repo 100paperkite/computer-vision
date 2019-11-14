@@ -3,17 +3,18 @@ import cv2
 import time
 
 CONST_R = (1 << np.arange(8))[:, None]
-
 #
-def wrap_image(base,addimg):
+def wrap_image(base, addimg):
     result = base.copy()
     for i in range(base.shape[0]):
         for j in range(base.shape[1]):
             if addimg[i, j] != 0:
                 result[i, j] = addimg[i, j]
     return result
+
+
 #
-def get_points(matches,kp1,kp2,num):
+def get_points(matches, kp1, kp2, num):
     matches = np.array(matches[:num])  # num 개수만큼 뽑기
     kp1 = np.array(kp1)
     kp2 = np.array(kp2)
@@ -24,7 +25,8 @@ def get_points(matches,kp1,kp2,num):
     p1 = np.array([np.array(kp.pt) for kp in kp1[idx1]])
     p2 = np.array([np.array(kp.pt) for kp in kp2[idx2]])
 
-    return p1,p2
+    return p1, p2
+
 
 # 2-1
 def hamming_distance(v1, v2):
@@ -65,10 +67,11 @@ def transform_coord(M, pts):
     result = result.reshape(size, 3)
 
     for coord in result:
-        if coord[2]!=0:
-            coord/=coord[2]
+        if coord[2] != 0:
+            coord /= coord[2]
 
     return result[:, :2]
+
 
 
 def get_normalize_matrix(P):
@@ -120,41 +123,48 @@ def compute_homography(srcP, destP):
 
 
 def compute_homography_ransac(srcP, destP, th):
-    n = len(srcP)
-    iteration = 4500
+    start = time.time()
+    iteration = 6000
     max_matched = 0
 
     inliers = []
     for iters in range(iteration):
+        # pick random 4 points
         rand4Idx = np.random.choice(len(srcP), 4, replace=False, p=None)
 
         # sampled 4 entries
         sample_srcP, sample_destP = srcP[rand4Idx], destP[rand4Idx]
 
         _H = compute_homography(sample_srcP, sample_destP)
-        test_destP = transform_coord(_H,srcP)
+        test_destP = transform_coord(_H, srcP)
 
+        # 변환된 점이 범위안에 있다면 inlier에 추가
         _inliers = []
         for i in range(len(test_destP)):
-            if abs(test_destP[i][0]-destP[i][0])<=th and abs(test_destP[i][1]-destP[i][1])<=th:
+            if abs(test_destP[i][0] - destP[i][0]) <= th and abs(test_destP[i][1] - destP[i][1]) <= th:
                 _inliers.append(i)
 
+        # 제일 많이 매칭된다면, 저장
         if len(_inliers) > max_matched:
-            inliers=_inliers
+            inliers = _inliers
             max_matched = len(_inliers)
 
-    return compute_homography(srcP[inliers],destP[inliers])
+    print("ransac time: ",time.time()-start)
 
-def image_blending(base,addimg,edge,length):
-    wrapImg = wrap_image(addimg,base)
-    xstart, xend = edge-length, edge
+    # 가장 잘 매칭된 것들끼리 homography를 다시 구해서 반환
+    return compute_homography(srcP[inliers], destP[inliers])
+
+
+def image_blending(base, addimg, edge, length):
+    wrapImg = wrap_image(addimg, base)
+    xstart, xend = edge - length, edge
 
     # xstart ~ xend 열로 갈수록 addimg 반영 비율 낮아짐
-    for x in range(xstart,xend):
-        # x+=length
-        p = (x-xstart)/(xend-xstart)
-        wrapImg[:,x] = (wrapImg[:,x]*(1-p)+addimg[:,x]*p)
-    return wrapImg/255
+    for x in range(xstart, xend):
+        p = (x - xstart) / (xend - xstart)
+        wrapImg[:, x] = (wrapImg[:, x] * (1 - p) + addimg[:, x] * p)
+    return wrapImg / 255
+
 
 # main script
 
@@ -175,57 +185,39 @@ matches = BF_match(des1, des2)
 matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
 feature_matched = cv2.drawMatches(desk, kp1, cover, kp2, toDMatchList(matches[:20]), None, flags=2)
 
-cv2.imshow('feature matching',feature_matched)
+cv2.imshow('feature matching', feature_matched)
 cv2.waitKey(0)
 
-
 # 2-2 Computing homography with normalization
-deskP, coverP = get_points(matches,kp1,kp2,18)
+deskP, coverP = get_points(matches, kp1, kp2, 18)
 
 T = compute_homography(coverP, deskP)
-transformed_img = cv2.warpPerspective(cover,T, (desk.shape[1],desk.shape[0]))
+transformed_img = cv2.warpPerspective(cover, T, (desk.shape[1], desk.shape[0]))
 
-cv2.imshow('homography with normalization', wrap_image(desk,transformed_img))
+cv2.imshow('homography with normalization', wrap_image(desk, transformed_img))
 cv2.waitKey(0)
 
 # Computing homography with RANSAC
-deskP, coverP = get_points(matches,kp1,kp2,140)
+deskP, coverP = get_points(matches, kp1, kp2, 21)
 
-ransac = compute_homography_ransac(coverP,deskP,2)
+ransac = compute_homography_ransac(coverP, deskP, 3)
+ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1], desk.shape[0]))
 
-ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1],desk.shape[0]))
-
-cv2.imshow('ransac', wrap_image(desk,ransac_img))
+cv2.imshow('ransac', wrap_image(desk, ransac_img))
 cv2.waitKey(0)
 
 # 2-4 (c) harry potter
-
 hp_cover = cv2.imread('hp_cover.jpg', cv2.IMREAD_GRAYSCALE)
-# scaling
-rate = [cover.shape[i]/hp_cover.shape[i] for i in range(2)]
-HP = np.full(cover.shape,0,dtype=np.float)
-
-# magnifying
-S = np.array([[rate[1],0,0],[0,rate[0],0],[0,0,1]])
-D = np.arange(0,1.0,0.05)
-for i in range(hp_cover.shape[0]):
-    for j in range(hp_cover.shape[1]):
-        for d in D:
-            _x, _y, _ = np.dot(S, np.array([[j+d], [i+d], [1]]))
-            HP[int(_y),int(_x)] = hp_cover[i,j]
-
-
-hp_img = cv2.warpPerspective(HP, ransac, (desk.shape[1],desk.shape[0]))
-cv2.imshow('harry potter wrapping', wrap_image(desk,hp_img))
+hp_img = cv2.warpPerspective(cv2.resize(hp_cover, (cover.shape[1], cover.shape[0])), ransac,
+                             (desk.shape[1], desk.shape[0]))
+cv2.imshow('harry potter wrapping', wrap_image(desk, hp_img))
 cv2.waitKey(0)
 
-
 # 2-5 Image stitching
-
-left = cv2.imread('diamondhead-10.png',cv2.IMREAD_GRAYSCALE)
-right = cv2.imread('diamondhead-11.png',cv2.IMREAD_GRAYSCALE)
-ly,lx = left.shape
-ry,rx = right.shape
+left = cv2.imread('diamondhead-10.png', cv2.IMREAD_GRAYSCALE)
+right = cv2.imread('diamondhead-11.png', cv2.IMREAD_GRAYSCALE)
+ly, lx = left.shape
+ry, rx = right.shape
 
 # kp - 2차원 좌표,  des = descriptor
 orb = cv2.ORB_create()
@@ -235,19 +227,16 @@ kp2 = orb.detect(right, None)
 kp2, des2 = orb.compute(right, kp2)
 
 # 2-1 Feature detection, description, and matching
-
 matches = BF_match(des1, des2)
 matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
 
-leftP, rightP  = get_points(matches,kp1,kp2,18)
-ransac = compute_homography_ransac(rightP,leftP,0.8)
-distance = int(leftP[0,0]-rightP[0,0])
-ransac_img = cv2.warpPerspective(right, ransac, (lx+distance,ly))
+leftP, rightP = get_points(matches, kp1, kp2, 18)  # ransac point 18개
 
-left = np.hstack([left,np.zeros((ly,distance))])
-result = image_blending(left,ransac_img,lx,200)
-cv2.imshow('Image Stitching',result)
+distance = int(leftP[0, 0] - rightP[0, 0]) # 매칭 포인트 사이 거리 - 해당 거리만큼 그림이 잘려야 함
+ransac = compute_homography_ransac(rightP, leftP, 0.8)
+ransac_img = cv2.warpPerspective(right, ransac, (lx + distance, ly))
+
+left = np.hstack([left, np.zeros((ly, distance))])
+result = image_blending(left, ransac_img, lx, 200)
+cv2.imshow('Image Stitching', result)
 cv2.waitKey(0)
-
-
-
