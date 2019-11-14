@@ -82,13 +82,9 @@ I = np.array([[1, 0, 0],
               [0, 0, 1]])
 M = I
 
-shift = False
 while True:
     cv2.imshow('result', get_transformed_image(img, M))
     keyboard = cv2.waitKey()
-    if(keyboard==0):
-        shift = True
-        continue
 
     if keyboard == ord('a'):
         M = np.dot(transition_matrix((0, -1), 5), M)
@@ -98,25 +94,25 @@ while True:
         M = np.dot(transition_matrix((1, 0), 5), M)
     elif keyboard == ord('s'):
         M = np.dot(transition_matrix((-1, 0), 5), M)
-    elif keyboard == ord('r') and shift:
+    elif keyboard == ord('R'):
         M = np.dot(rotation_matrix(-5), M)
     elif keyboard == ord('r'):
         M = np.dot(rotation_matrix(5), M)
-    elif keyboard == ord('f') and shift:
+    elif keyboard == ord('F'):
         M = np.dot(filp_matrix(0), M)
     elif keyboard == ord('f'):
         M = np.dot(filp_matrix(1), M)
-    elif keyboard == ord('x') and shift:
+    elif keyboard == ord('X'):
         M = np.dot(scaling_matrix(0, 5), M)
     elif keyboard == ord('x'):
         M = np.dot(scaling_matrix(0, -5), M)
-    elif keyboard == ord('y') and shift:
+    elif keyboard == ord('Y'):
         M = np.dot(scaling_matrix(1, 5), M)
     elif keyboard == ord('y'):
         M = np.dot(scaling_matrix(1, -5), M)
-    elif keyboard == ord('h') and shift:
+    elif keyboard == ord('H'):
         M = I
-    elif keyboard == ord('q') and shift:
+    elif keyboard == ord('Q'):
         break
     shift = False
 
