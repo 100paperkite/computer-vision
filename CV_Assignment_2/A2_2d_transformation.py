@@ -52,27 +52,30 @@ def get_transformed_image(img, M):
     imgIndex = np.where(img < 255)
     Y, X = -imgIndex[0]+yhalf, imgIndex[1]-xhalf
 
-
     result_img = np.full((801, 801), 255, dtype=float) # 배경이미지 생성
 
     # 실제 값의 좌표들을 행렬 M을 이용하여 transform 시키기.
     x = list([0,0,0,0])
     y = list([0,0,0,0])
+    d = 0.5
     for i in range(len(Y)):
-        # 이미지 깨짐 방지 위해 픽셀값 -0.9~+0.9 범위 내 픽셀 모두 고려.
-        x[0], y[0], _ = np.dot(M, np.array([[X[i]+0.9], [Y[i]+0.9], [1]])) +400
-        x[1], y[1], _ = np.dot(M, np.array([[X[i]-0.9], [Y[i]-0.9], [1]])) +400
-        x[2], y[2], _ = np.dot(M, np.array([[X[i]+0.9], [Y[i]-0.9], [1]])) +400
-        x[3], y[3], _ = np.dot(M, np.array([[X[i]-0.9], [Y[i]+0.9], [1]])) +400
+        # 이미지 깨짐 방지 위해 픽셀값 -d~+d 범위 내 픽셀 모두 고려.
+        # 이미지의 원점과 배경이미지의 원점을 맞추기 위해 +400 더해줌
+        _x,_y, _ = np.dot(M, np.array([[X[i]], [Y[i]], [1]])) + 400 # 원래 매핑 되어야 하는 값
+        [x[0]], [y[0]], _ = np.dot(M, np.array([[X[i]+d], [Y[i]+d], [1]])) +400
+        [x[1]], [y[1]], _ = np.dot(M, np.array([[X[i]-d], [Y[i]-d], [1]])) +400
+        [x[2]], [y[2]], _ = np.dot(M, np.array([[X[i]+d], [Y[i]-d], [1]])) +400
+        [x[3]], [y[3]], _ = np.dot(M, np.array([[X[i]-d], [Y[i]+d], [1]])) +400
 
         x = sorted(x) # 최대 x, 최소 x 찾기 위해 sort
         y = sorted(y) # 최대 y, 최소 y 찾기 위해 sort
 
-        # 배경이미지의 중심이 이미지의 중심으로 맞추고, 실제로 매핑시키기.
-        result_img[int(-y[3]):int(-y[0]),int(x[0]):int(x[3])] = img[-Y[i]+yhalf, X[i]+xhalf]
+        # 범위 내의 픽셀값들에 전부 기존 값 매핑시키기. (y는 좌표상에서 -/+ 반대이기 때문에 -부호 처리해줌)
+        result_img[int(-y[3]):int(-y[0]),int(x[0]):int(x[3])] = result_img[int(-_y),int(_x)] = img[-Y[i]+yhalf, X[i]+xhalf]
+
     draw_axis(result_img)
 
-    return result_img
+    return result_img/255
 
 
 input_img = 'smile.png'
