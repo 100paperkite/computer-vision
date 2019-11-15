@@ -57,7 +57,7 @@ def get_transformed_image(img, M):
     result_img = np.full((801, 801), 255, dtype=float) # 배경이미지 생성
 
     # 픽셀값 세분화
-    D = np.arange(-0.5,0.5,0.04)
+    D = np.arange(-0.5,0.5,0.1)
 
     #start = time.time()
     # 실제 값의 좌표들을 행렬 M을 이용하여 transform 시키기.
@@ -114,7 +114,6 @@ while True:
         M = I
     elif keyboard == ord('Q'):
         break
-    shift = False
 
 cv2.destroyAllWindows()
 

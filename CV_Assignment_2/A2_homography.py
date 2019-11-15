@@ -2,8 +2,10 @@ import numpy as np
 import cv2
 import time
 
-CONST_R = (1 << np.arange(8))[:, None]
-#
+
+CONST_R = (1 << np.arange(8))[:, None] # 해밍거리 계산하기 위한 값
+
+# base에 add image 덧붙이기
 def wrap_image(base, addimg):
     result = base.copy()
     for i in range(base.shape[0]):
@@ -13,7 +15,7 @@ def wrap_image(base, addimg):
     return result
 
 
-#
+# match에서 num 개수만큼 keypoint 각각 뽑기
 def get_points(matches, kp1, kp2, num):
     matches = np.array(matches[:num])  # num 개수만큼 뽑기
     kp1 = np.array(kp1)
@@ -29,10 +31,12 @@ def get_points(matches, kp1, kp2, num):
 
 
 # 2-1
+
+# 해밍거리 구하기
 def hamming_distance(v1, v2):
     return np.count_nonzero((v1 & CONST_R) != (v2 & CONST_R))
 
-
+# BF 매쳐 구현
 def BF_match(des1, des2):
     matches = []
     for i in range(len(des1)):
@@ -43,6 +47,7 @@ def BF_match(des1, des2):
     return matches
 
 
+# DMactch 객체 리스트로 만들어 반환
 def toDMatchList(matches):
     res = []
     res = [cv2.DMatch() for i in range(len(matches))]
@@ -56,6 +61,7 @@ def toDMatchList(matches):
 # srcP, desP : N x 2 matrices - N(# of matched points, and location in img)
 # return value : 3 x 3 transformed matrix
 
+# 좌표 변환
 def transform_coord(M, pts):
     size = pts.shape[0]
     # to homogeneous
@@ -73,7 +79,7 @@ def transform_coord(M, pts):
     return result[:, :2]
 
 
-
+# 정규화 matrix 반환
 def get_normalize_matrix(P):
     m = np.mean(P, axis=0)  # 1. mean subtraction
     p = np.array([P[:, 0] - m[0], P[:, 1] - m[1]])
@@ -88,7 +94,7 @@ def get_normalize_matrix(P):
     N = np.dot(scaleMat, meanMat)
     return N
 
-
+# homography에서 matrix A구하기
 def find_matrix_A(srcP, destP):
     size = srcP.shape[0]
     # [x,y,_x,_y] form
@@ -98,7 +104,7 @@ def find_matrix_A(srcP, destP):
 
     return np.reshape(A, (size * 2, 9))
 
-
+# homography 구하기
 def compute_homography(srcP, destP):
     # get normalizing matrixes
     Ts = get_normalize_matrix(srcP)
@@ -124,14 +130,16 @@ def compute_homography(srcP, destP):
 
 def compute_homography_ransac(srcP, destP, th):
     start = time.time()
-    iteration = 6000
-    max_matched = 0
 
-    inliers = []
+    iteration = 4000
+    max_matched = 0
+    inliers = [] # 매칭되는 inlier 좌표의 index들
+
+    np.random.seed(0)
+
     for iters in range(iteration):
         # pick random 4 points
         rand4Idx = np.random.choice(len(srcP), 4, replace=False, p=None)
-
         # sampled 4 entries
         sample_srcP, sample_destP = srcP[rand4Idx], destP[rand4Idx]
 
@@ -198,9 +206,9 @@ cv2.imshow('homography with normalization', wrap_image(desk, transformed_img))
 cv2.waitKey(0)
 
 # Computing homography with RANSAC
-deskP, coverP = get_points(matches, kp1, kp2, 21)
+deskP, coverP = get_points(matches, kp1, kp2, 40)
 
-ransac = compute_homography_ransac(coverP, deskP, 3)
+ransac = compute_homography_ransac(coverP, deskP,2)
 ransac_img = cv2.warpPerspective(cover, ransac, (desk.shape[1], desk.shape[0]))
 
 cv2.imshow('ransac', wrap_image(desk, ransac_img))
@@ -226,7 +234,7 @@ kp1, des1 = orb.compute(left, kp1)
 kp2 = orb.detect(right, None)
 kp2, des2 = orb.compute(right, kp2)
 
-# 2-1 Feature detection, description, and matching
+# Feature detection, description, and matching
 matches = BF_match(des1, des2)
 matches = sorted(matches, key=lambda x: x[2])  # distance 정렬
 
@@ -234,9 +242,9 @@ leftP, rightP = get_points(matches, kp1, kp2, 18)  # ransac point 18개
 
 distance = int(leftP[0, 0] - rightP[0, 0]) # 매칭 포인트 사이 거리 - 해당 거리만큼 그림이 잘려야 함
 ransac = compute_homography_ransac(rightP, leftP, 0.8)
-ransac_img = cv2.warpPerspective(right, ransac, (lx + distance, ly))
+ransac_img = cv2.warpPerspective(right, ransac, (lx + distance, ly)) # 이미지 변환
 
 left = np.hstack([left, np.zeros((ly, distance))])
-result = image_blending(left, ransac_img, lx, 200)
+result = image_blending(left, ransac_img, lx, 200) # 이미지 자연스럽게 붙이기
 cv2.imshow('Image Stitching', result)
 cv2.waitKey(0)
