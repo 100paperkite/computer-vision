@@ -3,7 +3,6 @@ import cv2
 import math
 import time
 
-
 def transition_matrix(dir, amount):
     dy, dx = dir
     return np.array([[1, 0, dx * amount],
@@ -56,20 +55,22 @@ def get_transformed_image(img, M):
 
     result_img = np.full((801, 801), 255, dtype=float) # 배경이미지 생성
 
-    # 픽셀값 세분화
-    D = np.arange(-0.5,0.5,0.1)
-
-    #start = time.time()
     # 실제 값의 좌표들을 행렬 M을 이용하여 transform 시키기.
+    x = list([0,0,0,0])
+    y = list([0,0,0,0])
     for i in range(len(Y)):
-        for d in D:
-            # 바뀐 좌표 _x, _y
-            _x, _y, _ = np.dot(M, np.array([[X[i]+d], [Y[i]+d], [1]]))
-            # 배경이미지의 중심이 이미지의 중심으로 맞추고, 실제로 매핑시키기.
-            result_img[-int(_y)+400,int(_x)+400] = img[-Y[i]+yhalf, X[i]+xhalf]
+        # 이미지 깨짐 방지 위해 픽셀값 -0.9~+0.9 범위 내 픽셀 모두 고려.
+        x[0], y[0], _ = np.dot(M, np.array([[X[i]+0.9], [Y[i]+0.9], [1]])) +400
+        x[1], y[1], _ = np.dot(M, np.array([[X[i]-0.9], [Y[i]-0.9], [1]])) +400
+        x[2], y[2], _ = np.dot(M, np.array([[X[i]+0.9], [Y[i]-0.9], [1]])) +400
+        x[3], y[3], _ = np.dot(M, np.array([[X[i]-0.9], [Y[i]+0.9], [1]])) +400
 
+        x = sorted(x) # 최대 x, 최소 x 찾기 위해 sort
+        y = sorted(y) # 최대 y, 최소 y 찾기 위해 sort
+
+        # 배경이미지의 중심이 이미지의 중심으로 맞추고, 실제로 매핑시키기.
+        result_img[int(-y[3]):int(-y[0]),int(x[0]):int(x[3])] = img[-Y[i]+yhalf, X[i]+xhalf]
     draw_axis(result_img)
-    #print(time.time() - start)
 
     return result_img
 
