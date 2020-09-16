@@ -27,7 +27,11 @@
 <img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/interactive%20transformation%20example.png" width="130">
 
 - Compute homography with RANSAC -> Image warping
+
+<img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/ransac.png" width="400">
+
 - Image stitching ( warping & blurring )
+
 <img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/Image%20Stitching.png" width="800">
 
 ## Assignment 3
