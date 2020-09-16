@@ -1,4 +1,4 @@
-# Computer Vison 
+# computer-vision 
 
 ## Assignment 1
 
