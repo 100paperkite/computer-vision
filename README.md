@@ -20,7 +20,11 @@
 
 - Interactive 2D transformations
 
-<img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/interactive%20transformation.png" width="400"> <img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/interactive%20transformation%20example.png" width="130">
+<img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/interactive%20transformation.png" width="400">
+
+**strong** when we enlarge or rotate the image
+
+<img src="https://github.com/whitedelay/computer-vision/blob/master/CV_Assignment_2/result/interactive%20transformation%20example.png" width="130">
 
 - Compute homography with RANSAC -> Image warping
 - Image stitching ( warping & blurring )
